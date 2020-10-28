@@ -32,7 +32,11 @@ def handle_csv_upload(event, context):
         for k, v in user.items():
             k = new_keys[k] if k in new_keys else k.lower()
             if k == 'salary':
-                v = int(v)
+                try:
+                    v = int(v)
+                except ValueError as e:
+                    response_body['errors'].append(str(e))
+                    continue
             elif k == 'hire_date':
                 v = datetime.datetime.strptime(v, '%m/%d/%Y')
             elif k == 'manager_id' and v:
