@@ -170,3 +170,72 @@ John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
         {"user_id": john["_id"]})
     assert(len(john_chain_of_command["chain_of_command"]) == 1)
     assert(john_chain_of_command["chain_of_command"][0] == brad["_id"])
+
+
+
+@dummy_data_decorator
+def test_invalid_email():
+    '''
+    This test should still update Brad and create John, but should return
+    a single error because the salary field for Brad isn't a number
+    '''
+
+    # users with invalid email addresses
+    body = '''Name,Email,Manager,Salary,Hire Date
+John1,jsmith.com,,80000,07/16/2018
+John2,jsmith@performyard,,80000,07/16/2018
+John3,jsmith(1)@performyard.com,,80000,07/16/2018
+John4,jsmith@performyard@py.com,,80000,07/16/2018
+John5,jsmith@perform--yard.com,,80000,07/16/2018
+John6,jsmith@-performyard.com,,80000,07/16/2018
+John7,jsmith@performyard-.com,,80000,07/16/2018
+John8,jsmith@performyard.c,,80000,07/16/2018
+John9,jsmith@performyard.co2,,80000,07/16/2018
+'''
+
+    response = handle_csv_upload(body, {})
+    assert (response["statusCode"] == 200)
+    body = json.loads(response["body"])
+
+    # Check the response counts
+    assert (body["numCreated"] == 9)
+    assert (body["numUpdated"] == 0)
+    assert (len(body["errors"]) == 9)
+
+    # Check that we added the correct number of users
+    assert (db.user.count() == 11)
+    assert (db.chain_of_command.count() == 11)
+
+
+@dummy_data_decorator
+def test_valid_email():
+    '''
+    This test should still update Brad and create John, but should return
+    a single error because the salary field for Brad isn't a number
+    '''
+
+    # users with valid email addresses
+    body = '''Name,Email,Manager,Salary,Hire Date
+John1,jsmith@performyard.com,,80000,07/16/2018
+John2,JSMITH@PY.NET,,80000,07/16/2018
+John3,j_smith@peformyard.web,,80000,07/16/2018
+John4,j.Smith@py.pizza,,80000,07/16/2018
+John5,jsmith123@perf.org,,80000,07/16/2018
+John6,j-smith@performyard.com,,80000,07/16/2018
+John7,jsmith@perform-yard.com,,80000,07/16/2018
+John8,jsmith@performyard2.com,,80000,07/16/2018
+'''
+
+    response = handle_csv_upload(body, {})
+    assert (response["statusCode"] == 200)
+    body = json.loads(response["body"])
+
+    # Check the response counts
+    assert (body["numCreated"] == 8)
+    assert (body["numUpdated"] == 0)
+    assert (len(body["errors"]) == 0)
+
+    # Check that we added the correct number of users
+    assert (db.user.count() == 10)
+    assert (db.chain_of_command.count() == 10)
+

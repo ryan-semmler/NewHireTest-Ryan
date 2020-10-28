@@ -2,6 +2,7 @@ import json
 import os
 import csv
 import datetime
+import re
 from pymongo import MongoClient
 
 
@@ -41,6 +42,10 @@ def handle_csv_upload(event, context):
                 v = datetime.datetime.strptime(v, '%m/%d/%Y')
             elif k == 'manager_id' and v:
                 v = db.user.find_one({'normalized_email': user['Manager']})['_id']
+            elif k == 'normalized_email':
+                if not re.match(r'[\w_\-.%]+@(\w+-?)*\w+\.[a-zA-Z]{2,}$', v):  # check that email addr is valid
+                    response_body['errors'].append(f"{v} is not a valid email address.")
+                v = v.lower()  # normalize
             user_data[k] = v
 
         # check whether user already exists in db
