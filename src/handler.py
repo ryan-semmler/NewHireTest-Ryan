@@ -37,15 +37,15 @@ def handle_csv_upload(event, context):
                     v = int(v)
                 except ValueError as e:
                     response_body['errors'].append(str(e))
-                    continue
+                    v = None
             elif k == 'hire_date':
                 v = datetime.datetime.strptime(v, '%m/%d/%Y')
             elif k == 'manager_id' and v:
-                v = db.user.find_one({'normalized_email': user['Manager']})['_id']
+                v = db.user.find_one({'normalized_email': user['Manager']})['_id'] or None
             elif k == 'normalized_email':
-                if not re.match(r'[\w_\-.%]+@(\w+-?)*\w+\.[a-zA-Z]{2,}$', v):  # check that email addr is valid
+                if not re.match(r'\s*[\w_\-.%]+@(\w+-?)*\w+\.[a-zA-Z]{2,}\s*$', v):  # check that email addr is valid
                     response_body['errors'].append(f"{v} is not a valid email address.")
-                v = v.lower()  # normalize
+                v = v.lower().strip()  # normalize
             user_data[k] = v
 
         # check whether user already exists in db

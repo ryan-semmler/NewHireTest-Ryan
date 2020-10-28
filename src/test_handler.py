@@ -239,3 +239,33 @@ John8,jsmith@performyard2.com,,80000,07/16/2018
     assert (db.user.count() == 10)
     assert (db.chain_of_command.count() == 10)
 
+# TODO test details of CoC implementation
+
+@dummy_data_decorator
+def test_duplicate_name():
+    '''
+    This test should still update Brad and create John, but should return
+    a single error because the salary field for Brad isn't a number
+    '''
+
+    body = '''Name,Email,Manager,Salary,Hire Date
+Bradley Jones,bjones@performyard.com,,90000,02/10/2010
+Bradley Jones,bradj@performyard.com,bjones@performyard.com,90001,07/16/2018
+'''
+
+    response = handle_csv_upload(body, {})
+    assert(response["statusCode"] == 200)
+    body = json.loads(response["body"])
+
+    # Check the response counts
+    assert(body["numCreated"] == 1)
+    assert(body["numUpdated"] == 1)
+    assert(len(body["errors"]) == 0)
+
+    # Check that we added the correct number of users
+    assert(db.user.count() == 3)
+    assert(db.chain_of_command.count() == 3)
+
+    # Check that there are two users with the name Bradley Jones
+    assert(db.user.find({'name': 'Bradley Jones'}).count() == 2)
+
