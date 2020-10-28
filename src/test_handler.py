@@ -96,25 +96,25 @@ John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
     assert(body["numUpdated"] == 1)
     assert(len(body["errors"]) == 0)
 
-    # # Check that we added the correct number of users
-    # assert(db.user.count() == 3)
-    # assert(db.chain_of_command.count() == 3)
-    #
-    # # Check that Brad's salary was updated
-    # brad = db.user.find_one({"normalized_email": "bjones@performyard.com"})
-    # assert(brad["salary"] == 100000)
-    #
-    # # Check that Brad's chain of command is still empty
-    # brad_chain_of_command = db.chain_of_command.find_one(
-    #     {"user_id": brad["_id"]})
-    # assert(len(brad_chain_of_command["chain_of_command"]) == 0)
-    #
-    # # Check that John's data was inserted correctly
-    # john = db.user.find_one({"normalized_email": "jsmith@performyard.com"})
-    # assert(john["name"] == "John Smith")
-    # assert(john["salary"] == 80000)
-    # assert(john["manager_id"] == brad["_id"])
-    # assert(john["hire_date"] == datetime.datetime(2018, 7, 16))
+    # Check that we added the correct number of users
+    assert(db.user.count() == 3)
+    assert(db.chain_of_command.count() == 3)
+
+    # Check that Brad's salary was updated
+    brad = db.user.find_one({"normalized_email": "bjones@performyard.com"})
+    assert(brad["salary"] == 100000)
+
+    # Check that Brad's chain of command is still empty
+    brad_chain_of_command = db.chain_of_command.find_one(
+        {"user_id": brad["_id"]})
+    assert(len(brad_chain_of_command["chain_of_command"]) == 0)
+
+    # Check that John's data was inserted correctly
+    john = db.user.find_one({"normalized_email": "jsmith@performyard.com"})
+    assert(john["name"] == "John Smith")
+    assert(john["salary"] == 80000)
+    assert(john["manager_id"] == brad["_id"])
+    assert(john["hire_date"] == datetime.datetime(2018, 7, 16))
     #
     # # Check that Brad is in John's chain of command
     # john_chain_of_command = db.chain_of_command.find_one(

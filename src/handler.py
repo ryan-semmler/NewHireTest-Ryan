@@ -4,6 +4,8 @@ import csv
 import datetime
 from pymongo import MongoClient
 
+from pdb import set_trace
+
 db_uri = os.environ.get("MONGO_DB_URI", "localhost")
 db_name = os.environ.get("MONGO_DB_NAME", "new_hire_test")
 
@@ -35,6 +37,8 @@ def handle_csv_upload(event, context):
                 v = int(v)
             elif k == 'hire_date':
                 v = datetime.datetime.strptime(v, '%m/%d/%Y')
+            elif k == 'manager_id' and v:
+                v = db.user.find_one({'normalized_email': user['Manager']})['_id']
             user_data[k] = v
 
 
@@ -50,16 +54,24 @@ def handle_csv_upload(event, context):
                                {"$set": user_data})
             response_body['numUpdated'] += 1
         else:
-            # create new user
+            # insert user
             db.user.insert_one(user_data)
             response_body['numCreated'] += 1
+
+            # insert chain of command
+            data = {"user_id": user_data['_id'],
+                    "chain_of_command": []}
+            current_user = db.user.find_one({'_id': user_data['_id']})
+            while current_user['manager_id']:
+                data['chain_of_command'].append(current_user['manager_id'])
+                current_user = db.user.find_one({'_id': current_user['manager_id']})
+            db.chain_of_command.insert_one(data)
 
         # # update field names
         # translation = {'Email': 'normalized_email'}
         # update = {"$rename": translation}
         # db.user.update({'Email': user['Email']}, update)
 
-        import pdb; pdb.set_trace()
 
     response = {
         "statusCode": 200,
