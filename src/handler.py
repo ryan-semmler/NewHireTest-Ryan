@@ -37,7 +37,7 @@ def handle_csv_upload(event, context):
                     v = int(v)
                 except ValueError as e:
                     response_body['errors'].append(str(e))
-                    v = None
+                    continue
             elif k == 'hire_date':
                 v = datetime.datetime.strptime(v, '%m/%d/%Y')
             elif k == 'manager_id' and v:
@@ -50,11 +50,30 @@ def handle_csv_upload(event, context):
 
         # check whether user already exists in db
         existing_user = db.user.find_one({'normalized_email': user_data['normalized_email']})
+        # import pdb; pdb.set_trace()
+
+
         if existing_user:
+            # insert chain of command
+            user_record = db.user.find_one({'normalized_email': user_data['normalized_email']})
+            manager_id = user_data['manager_id']
+            user_id = user_record['_id']
+
+            data = {"user_id": user_id,
+                    "chain_of_command": []}
+            # import pdb; pdb.set_trace()
+            if manager_id:
+                data['chain_of_command'].append(manager_id)
+                current_user = db.user.find_one({'_id': manager_id})
+                while current_user['manager_id']:
+                    data['chain_of_command'].append(user_data['manager_id'])
+                    current_user = db.user.find_one({'_id': user_data['manager_id']})
             # update existing user
             db.user.update_one({'normalized_email': user_data['normalized_email']},
                                {"$set": user_data})
             response_body['numUpdated'] += 1
+            db.chain_of_command.update_one({'user_id': user_id},
+                                           {"$set": data})
         else:
             # insert user
             db.user.insert_one(user_data)
@@ -67,6 +86,7 @@ def handle_csv_upload(event, context):
             while current_user['manager_id']:
                 data['chain_of_command'].append(current_user['manager_id'])
                 current_user = db.user.find_one({'_id': current_user['manager_id']})
+
             db.chain_of_command.insert_one(data)
 
     response = {
