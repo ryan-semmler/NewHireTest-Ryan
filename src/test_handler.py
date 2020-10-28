@@ -115,58 +115,58 @@ John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
     assert(john["salary"] == 80000)
     assert(john["manager_id"] == brad["_id"])
     assert(john["hire_date"] == datetime.datetime(2018, 7, 16))
-    #
-    # # Check that Brad is in John's chain of command
-    # john_chain_of_command = db.chain_of_command.find_one(
-    #     {"user_id": john["_id"]})
-    # assert(len(john_chain_of_command["chain_of_command"]) == 1)
-    # assert(john_chain_of_command["chain_of_command"][0] == brad["_id"])
 
-#
-# @dummy_data_decorator
-# def test_invalid_number():
-#     '''
-#     This test should still update Brad and create John, but should return
-#     a single error because the salary field for Brad isn't a number
-#     '''
-#
-#     body = '''Name,Email,Manager,Salary,Hire Date
-# Bradley Jones,bjones@performyard.com,,NOT A NUMBER,02/10/2010
-# John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
-# '''
-#
-#     response = handle_csv_upload(body, {})
-#     assert(response["statusCode"] == 200)
-#     body = json.loads(response["body"])
-#
-#     # Check the response counts
-#     assert(body["numCreated"] == 1)
-#     assert(body["numUpdated"] == 1)
-#     assert(len(body["errors"]) == 1)
-#
-#     # Check that we added the correct number of users
-#     assert(db.user.count() == 3)
-#     assert(db.chain_of_command.count() == 3)
-#
-#     # Check that Brad's salary was updated
-#     brad = db.user.find_one({"normalized_email": "bjones@performyard.com"})
-#     assert(brad["salary"] == 90000)
-#     assert(brad["name"] == "Bradley Jones")
-#
-#     # Check that Brad's chain of command is still empty
-#     brad_chain_of_command = db.chain_of_command.find_one(
-#         {"user_id": brad["_id"]})
-#     assert(len(brad_chain_of_command["chain_of_command"]) == 0)
-#
-#     # Check that John's data was inserted correctly
-#     john = db.user.find_one({"normalized_email": "jsmith@performyard.com"})
-#     assert(john["name"] == "John Smith")
-#     assert(john["salary"] == 80000)
-#     assert(john["manager_id"] == brad["_id"])
-#     assert(john["hire_date"] == datetime.datetime(2018, 7, 16))
-#
-#     # Check that Brad is in John's chain of command
-#     john_chain_of_command = db.chain_of_command.find_one(
-#         {"user_id": john["_id"]})
-#     assert(len(john_chain_of_command["chain_of_command"]) == 1)
-#     assert(john_chain_of_command["chain_of_command"][0] == brad["_id"])
+    # Check that Brad is in John's chain of command
+    john_chain_of_command = db.chain_of_command.find_one(
+        {"user_id": john["_id"]})
+    assert(len(john_chain_of_command["chain_of_command"]) == 1)
+    assert(john_chain_of_command["chain_of_command"][0] == brad["_id"])
+
+
+@dummy_data_decorator
+def test_invalid_number():
+    '''
+    This test should still update Brad and create John, but should return
+    a single error because the salary field for Brad isn't a number
+    '''
+
+    body = '''Name,Email,Manager,Salary,Hire Date
+Bradley Jones,bjones@performyard.com,,NOT A NUMBER,02/10/2010
+John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
+'''
+
+    response = handle_csv_upload(body, {})
+    assert(response["statusCode"] == 200)
+    body = json.loads(response["body"])
+
+    # Check the response counts
+    assert(body["numCreated"] == 1)
+    assert(body["numUpdated"] == 1)
+    assert(len(body["errors"]) == 1)
+
+    # Check that we added the correct number of users
+    assert(db.user.count() == 3)
+    assert(db.chain_of_command.count() == 3)
+
+    # Check that Brad's salary was updated
+    brad = db.user.find_one({"normalized_email": "bjones@performyard.com"})
+    assert(brad["salary"] == 90000)
+    assert(brad["name"] == "Bradley Jones")
+
+    # Check that Brad's chain of command is still empty
+    brad_chain_of_command = db.chain_of_command.find_one(
+        {"user_id": brad["_id"]})
+    assert(len(brad_chain_of_command["chain_of_command"]) == 0)
+
+    # Check that John's data was inserted correctly
+    john = db.user.find_one({"normalized_email": "jsmith@performyard.com"})
+    assert(john["name"] == "John Smith")
+    assert(john["salary"] == 80000)
+    assert(john["manager_id"] == brad["_id"])
+    assert(john["hire_date"] == datetime.datetime(2018, 7, 16))
+
+    # Check that Brad is in John's chain of command
+    john_chain_of_command = db.chain_of_command.find_one(
+        {"user_id": john["_id"]})
+    assert(len(john_chain_of_command["chain_of_command"]) == 1)
+    assert(john_chain_of_command["chain_of_command"][0] == brad["_id"])

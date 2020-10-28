@@ -4,11 +4,9 @@ import csv
 import datetime
 from pymongo import MongoClient
 
-from pdb import set_trace
 
 db_uri = os.environ.get("MONGO_DB_URI", "localhost")
 db_name = os.environ.get("MONGO_DB_NAME", "new_hire_test")
-
 db = MongoClient(db_uri)[db_name]
 
 
@@ -41,13 +39,8 @@ def handle_csv_upload(event, context):
                 v = db.user.find_one({'normalized_email': user['Manager']})['_id']
             user_data[k] = v
 
-
-
-        # user_data = {new_keys[k] if k in new_keys else k.lower(): v for k, v in user.items()}
-
         # check whether user already exists in db
         existing_user = db.user.find_one({'normalized_email': user_data['normalized_email']})
-
         if existing_user:
             # update existing user
             db.user.update_one({'normalized_email': user_data['normalized_email']},
@@ -66,12 +59,6 @@ def handle_csv_upload(event, context):
                 data['chain_of_command'].append(current_user['manager_id'])
                 current_user = db.user.find_one({'_id': current_user['manager_id']})
             db.chain_of_command.insert_one(data)
-
-        # # update field names
-        # translation = {'Email': 'normalized_email'}
-        # update = {"$rename": translation}
-        # db.user.update({'Email': user['Email']}, update)
-
 
     response = {
         "statusCode": 200,
