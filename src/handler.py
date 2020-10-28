@@ -26,103 +26,79 @@ def handle_csv_upload(event, context):
         'Manager': 'manager_id',
         'Hire Date': 'hire_date',
     }
+    email_pattern = r'\s*[\w_\-.%]+@(\w+-?)*\w+\.[a-zA-Z]{2,}\s*$'
     event_user_ids = []
-
     for user in event_data:
         # standardize data
         user_data = {}
-        for k, v in user.items():
-            k = new_keys[k] if k in new_keys else k.lower()
-            if k == 'salary':
+        for key, val in user.items():
+            key = new_keys[key] if key in new_keys else key.lower()
+            if key == 'salary':
                 try:
-                    v = int(v)
+                    val = int(val)
                 except ValueError as e:
                     response_body['errors'].append(str(e))
                     continue
-            elif k == 'hire_date':
-                v = datetime.datetime.strptime(v, '%m/%d/%Y')
-            elif k == 'manager_id' and v:
+            elif key == 'hire_date':
+                val = datetime.datetime.strptime(val, '%m/%d/%Y')
+            elif key == 'manager_id' and val:
                 manager = db.user.find_one({'normalized_email': user['Manager']})
                 if manager:
-                    v = manager['_id']
-                # otherwise value will remain an email address for now
-            elif k == 'normalized_email':
-                if not re.match(r'\s*[\w_\-.%]+@(\w+-?)*\w+\.[a-zA-Z]{2,}\s*$', v):  # check that email addr is valid
-                    response_body['errors'].append(f"{v} is not a valid email address.")
-                v = v.lower().strip()  # normalize
-            user_data[k] = v
-
+                    val = manager['_id']
+                # else value will remain an email address for now
+            elif key == 'normalized_email':
+                # check that email is valid
+                if not re.match(email_pattern, val):
+                    response_body['errors'].append(f"{val} is not a valid email address.")
+                # normalize email
+                val = val.lower().strip()
+            user_data[key] = val
 
         # check whether user already exists in db
         existing_user = db.user.find_one({'normalized_email': user_data['normalized_email']})
-        # import pdb; pdb.set_trace()
-
         if existing_user:
-            # # insert chain of command
-            # user_record = db.user.find_one({'normalized_email': user_data['normalized_email']})
-            # manager_id = user_data['manager_id']
-            # user_id = user_record['_id']
-            #
-            # data = {"user_id": user_id,
-            #         "chain_of_command": []}
-            # # import pdb; pdb.set_trace()
-            # if manager_id:
-            #     data['chain_of_command'].append(manager_id)
-            #     current_user = db.user.find_one({'_id': manager_id})
-            #     while current_user['manager_id']:
-            #         data['chain_of_command'].append(user_data['manager_id'])
-            #         current_user = db.user.find_one({'_id': user_data['manager_id']})
             # update existing user
             db.user.update_one({'normalized_email': user_data['normalized_email']},
                                {"$set": user_data})
             response_body['numUpdated'] += 1
+
+            # update chain of command
             managers = []
             if user_data['manager_id']:
                 managers.append(user_data['manager_id'])
-
                 db.chain_of_command.update_one({'user_id': existing_user['_id']},
                                                {"$set": {'chain_of_command': managers}})
-            event_user_ids.append(existing_user['_id'])
 
+            event_user_ids.append(existing_user['_id'])
         else:
             # insert user
             db.user.insert_one(user_data)
             response_body['numCreated'] += 1
 
-            # # insert chain of command
-            # data = {"user_id": user_data['_id'],
-            #         "chain_of_command": []}
-            # current_user = db.user.find_one({'_id': user_data['_id']})
-            # while current_user['manager_id']:
-            #     data['chain_of_command'].append(current_user['manager_id'])
-            #     current_user = db.user.find_one({'_id': current_user['manager_id']})
-            #
-            # db.chain_of_command.insert_one(data)
+            # insert chain of command
             managers = []
             if user_data['manager_id']:
                 managers.append(user_data['manager_id'])
             db.chain_of_command.insert_one({"user_id": user_data['_id'],
                                             "chain_of_command": managers})
+
             event_user_ids.append(user_data['_id'])
 
-
-    # import pdb; pdb.set_trace()
-
-    # iterate users again to convert manager_ids from emails to ObjectIDs
-    # TODO store pattern as variable
-
     # update manager_id for users with an email address as manager_id
-    extend_chain_users = []
-    for user in db.user.find({'manager_id': {'$regex': r'\s*[\w_\-.%]+@(\w+-?)*\w+\.[a-zA-Z]{2,}\s*$'}}):
-        # insert chain of command
+    for user in db.user.find({'manager_id': {'$regex': email_pattern}}):
+        # update chain of command to use the manager's _id
         manager_id = db.user.find_one({'normalized_email': user['manager_id']})['_id']
         db.chain_of_command.update_one({'user_id': user['_id']},
                                        {"$set": {"chain_of_command": [manager_id]}})
+        # update user to use manager's _id as manager_id
         db.user.update_one({'normalized_email': user['normalized_email']},
                            {"$set": {'manager_id': manager_id}})
-        extend_chain_users.append(user)
 
     def update_chain_of_command(user_id):
+        """
+        Updates chains of command to include more than the user's immediate manager.
+        Then updates each of the user's subordinates' chains of command to include the change.
+        """
         chain_of_command = []
         if isinstance(user_id, dict):
             _id = user_id['_id']
@@ -140,35 +116,8 @@ def handle_csv_upload(event, context):
         for subordinate in db.user.find({'manager_id': user['_id']}):
             update_chain_of_command(subordinate)
 
-
     for user_id in event_user_ids:
         update_chain_of_command(user_id)
-
-        #
-        # current_user = user
-        # while current_user['manager_id']:
-        #     manager_id = current_user['manager_id']
-        #     if isinstance(current_user['manager_id'], str):
-        #         manager_id = db.user.find_one({'normalized_email': manager_id})
-        #     data['chain_of_command'].append(manager_id)
-        #     current_user = db.user.find_one({'_id': manager_id})
-        # db.chain_of_command.update_one({'user_id': user['_id']},
-        #                                {"$set": data})
-
-        #
-        # user_record = db.user.find_one({'normalized_email': user_data['normalized_email']})
-        # manager_id = user_data['manager_id']
-        # user_id = user_record['_id']
-        # data = {"user_id": user_id,
-        #         "chain_of_command": []}
-        # if manager_id:
-        #     data['chain_of_command'].append(manager_id)
-        #     current_user = db.user.find_one({'_id': manager_id})
-        #     while current_user['manager_id']:
-        #         data['chain_of_command'].append(user_data['manager_id'])
-        #         current_user = db.user.find_one({'_id': user_data['manager_id']})
-        # db.chain_of_command.update_one({'user_id': user_id},
-        #                                {"$set": data})
 
     response = {
         "statusCode": 200,

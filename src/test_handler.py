@@ -8,11 +8,11 @@ from bson import ObjectId
 
 def dummy_data_decorator(test_function):
     def f():
-        '''
+        """
         Drop any existing data and fill in some dummy test data,
         as well as creating indexes; the data will be dropped after
         the test as well
-        '''
+        """
 
         db.user.drop()
         db.user.create_index([
@@ -55,7 +55,8 @@ def dummy_data_decorator(test_function):
 
         dummy_chain_of_commands = [
             {"user_id": dummy_users[0]["_id"], "chain_of_command":[]},
-            {"user_id": dummy_users[1]["_id"], "chain_of_command":[dummy_users[0]]},
+            # edited this so that only brad's ID shows up in the chain of command
+            {"user_id": dummy_users[1]["_id"], "chain_of_command":[dummy_users[0]["_id"]]},
         ]
 
         for chain_of_command in dummy_chain_of_commands:
@@ -69,23 +70,23 @@ def dummy_data_decorator(test_function):
 
 @dummy_data_decorator
 def test_setup():
-    '''
+    """
     This test should always pass if your environment is set up correctly
-    '''
-    assert(True)
+    """
+    assert True
 
 
 @dummy_data_decorator
 def test_simple_csv():
-    '''
+    """
     This should successfully update one user and create one user,
     also updating their chain of commands appropriately
-    '''
+    """
 
-    body = '''Name,Email,Manager,Salary,Hire Date
+    body = """Name,Email,Manager,Salary,Hire Date
 Brad Jones,bjones@performyard.com,,100000,02/10/2010
 John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
-'''
+"""
 
     response = handle_csv_upload(body, {})
     assert(response["statusCode"] == 200)
@@ -125,15 +126,15 @@ John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
 
 @dummy_data_decorator
 def test_invalid_number():
-    '''
+    """
     This test should still update Brad and create John, but should return
     a single error because the salary field for Brad isn't a number
-    '''
+    """
 
-    body = '''Name,Email,Manager,Salary,Hire Date
+    body = """Name,Email,Manager,Salary,Hire Date
 Bradley Jones,bjones@performyard.com,,NOT A NUMBER,02/10/2010
 John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
-'''
+"""
 
     response = handle_csv_upload(body, {})
     assert(response["statusCode"] == 200)
@@ -172,16 +173,15 @@ John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
     assert(john_chain_of_command["chain_of_command"][0] == brad["_id"])
 
 
-
 @dummy_data_decorator
 def test_invalid_email():
-    '''
-    This test should still update Brad and create John, but should return
-    a single error because the salary field for Brad isn't a number
-    '''
+    """
+    This test adds nine new users with different invalid emails.
+    Each user should still be created, but an error should be logged for each invalid email.
+    """
 
     # users with invalid email addresses
-    body = '''Name,Email,Manager,Salary,Hire Date
+    body = """Name,Email,Manager,Salary,Hire Date
 John1,jsmith.com,,80000,07/16/2018
 John2,jsmith@performyard,,80000,07/16/2018
 John3,jsmith(1)@performyard.com,,80000,07/16/2018
@@ -191,7 +191,7 @@ John6,jsmith@-performyard.com,,80000,07/16/2018
 John7,jsmith@performyard-.com,,80000,07/16/2018
 John8,jsmith@performyard.c,,80000,07/16/2018
 John9,jsmith@performyard.co2,,80000,07/16/2018
-'''
+"""
 
     response = handle_csv_upload(body, {})
     assert (response["statusCode"] == 200)
@@ -209,13 +209,13 @@ John9,jsmith@performyard.co2,,80000,07/16/2018
 
 @dummy_data_decorator
 def test_valid_email():
-    '''
-    This test should still update Brad and create John, but should return
-    a single error because the salary field for Brad isn't a number
-    '''
+    """
+    This test adds eight new users with different valid emails.
+    Verify that different valid email formats get added successfully.
+    """
 
     # users with valid email addresses
-    body = '''Name,Email,Manager,Salary,Hire Date
+    body = """Name,Email,Manager,Salary,Hire Date
 John1,jsmith@performyard.com,,80000,07/16/2018
 John2,JSMITH@PY.NET,,80000,07/16/2018
 John3,j_smith@peformyard.web,,80000,07/16/2018
@@ -224,7 +224,7 @@ John5,jsmith123@perf.org,,80000,07/16/2018
 John6,j-smith@performyard.com,,80000,07/16/2018
 John7,jsmith@perform-yard.com,,80000,07/16/2018
 John8,jsmith@performyard2.com,,80000,07/16/2018
-'''
+"""
 
     response = handle_csv_upload(body, {})
     assert (response["statusCode"] == 200)
@@ -239,19 +239,18 @@ John8,jsmith@performyard2.com,,80000,07/16/2018
     assert (db.user.count() == 10)
     assert (db.chain_of_command.count() == 10)
 
-# TODO test details of CoC implementation
 
 @dummy_data_decorator
 def test_duplicate_name():
-    '''
-    This test should still update Brad and create John, but should return
-    a single error because the salary field for Brad isn't a number
-    '''
+    """
+    This test verifies that different users can be added to the db with the same name,
+    as long as they have different emails.
+    """
 
-    body = '''Name,Email,Manager,Salary,Hire Date
+    body = """Name,Email,Manager,Salary,Hire Date
 Bradley Jones,bjones@performyard.com,,90000,02/10/2010
 Bradley Jones,bradj@performyard.com,bjones@performyard.com,90001,07/16/2018
-'''
+"""
 
     response = handle_csv_upload(body, {})
     assert(response["statusCode"] == 200)
@@ -269,19 +268,18 @@ Bradley Jones,bradj@performyard.com,bjones@performyard.com,90001,07/16/2018
     # Check that there are two users with the name Bradley Jones
     assert(db.user.find({'name': 'Bradley Jones'}).count() == 2)
 
-# TODO fix documentation on all new funcs
 
 @dummy_data_decorator
 def test_duplicate_email():
-    '''
-    This test should still update Brad and create John, but should return
-    a single error because the salary field for Brad isn't a number
-    '''
+    """
+    This test checks behavior when adding multiple records with the same email address.
+    Users with the same email should be considered the same user, so duplicate users should be updated.
+    """
 
-    body = '''Name,Email,Manager,Salary,Hire Date
+    body = """Name,Email,Manager,Salary,Hire Date
 Bradley Jones,bjones@performyard.com,,90000,02/10/2010
 John Smith,bjones@performyard.com,,80000,07/16/2018
-'''
+"""
 
     response = handle_csv_upload(body, {})
     assert(response["statusCode"] == 200)
@@ -299,20 +297,18 @@ John Smith,bjones@performyard.com,,80000,07/16/2018
     # Check that there's only one user with the duplicated email address
     assert(db.user.find({'normalized_email': 'bjones@performyard.com'}).count() == 1)
 
-# TODO what if manager created after their subordinate?
 
 @dummy_data_decorator
 def test_chain_of_command():
-    '''
-    This test should still update Brad and create John, but should return
-    a single error because the salary field for Brad isn't a number
-    '''
+    """
+    This test verifies that longer chains of command get handled correctly.
+    """
 
-    body = '''Name,Email,Manager,Salary,Hire Date
+    body = """Name,Email,Manager,Salary,Hire Date
 Sara Bossman,sbossman@performyard.com,,110000,01/01/2020
 Bradley Jones,bjones@performyard.com,sbossman@performyard.com,90000,02/10/2010
 John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
-'''
+"""
 
     response = handle_csv_upload(body, {})
     assert(response["statusCode"] == 200)
@@ -326,25 +322,25 @@ John Smith,jsmith@performyard.com,bjones@performyard.com,80000,07/16/2018
     # Check that we added the correct number of users
     assert(db.user.count() == 4)
     assert(db.chain_of_command.count() == 4)
-    # import pdb; pdb.set_trace()
+
     # Check that each user has the correct number of users in their chain of command
     for name, cc_len in (("Sara Bossman", 0), ("Bradley Jones", 1), ("John Smith", 2)):
         user = db.user.find_one({'name': name})
         chain = db.chain_of_command.find_one({'user_id': user['_id']})
-        # import pdb; pdb.set_trace()
         assert(len(chain['chain_of_command']) == cc_len)
+
 
 @dummy_data_decorator
 def test_manager_created_after_subordinate():
-    '''
-    This test should still update Brad and create John, but should return
-    a single error because the salary field for Brad isn't a number
-    '''
+    """
+    This test verifies that chain of command is still handled correctly when a manager user
+    is created after a subordinate.
+    """
 
-    body = '''Name,Email,Manager,Salary,Hire Date
+    body = """Name,Email,Manager,Salary,Hire Date
 Bradley Jones,bjones@performyard.com,sbossman@performyard.com,90000,02/10/2010
 Sara Bossman,sbossman@performyard.com,,110000,01/01/2020
-'''
+"""
 
     response = handle_csv_upload(body, {})
     assert(response["statusCode"] == 200)
@@ -363,12 +359,11 @@ Sara Bossman,sbossman@performyard.com,,110000,01/01/2020
     for name, cc_len in (("Sara Bossman", 0), ("Bradley Jones", 1)):
         user = db.user.find_one({'name': name})
         chain = db.chain_of_command.find_one({'user_id': user['_id']})
-        # import pdb; pdb.set_trace()
         assert(len(chain['chain_of_command']) == cc_len)
 
     # Check that Brad's manager_id is Sara's user_id
     manager_id = db.user.find_one({'name': 'Bradley Jones'})['manager_id']
     assert(isinstance(manager_id, ObjectId))
     manager = db.user.find_one({'_id': manager_id})
-    assert(manager)
+    assert manager
     assert(manager['name'] == 'Sara Bossman')
